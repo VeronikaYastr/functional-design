@@ -1,6 +1,6 @@
 package net.degoes
 
-import java.time.Instant
+import java.time.{Instant, LocalDate}
 
 /*
  * INTRODUCTION
@@ -30,7 +30,10 @@ object credit_card {
    *  * Expiration date
    *  * Security code
    */
-  type CreditCard
+
+  case class ExpirationDate(month: Int, year: Int)
+
+  case class CreditCard(name: String, number: String, expirationDate: ExpirationDate, secCode: String)
 
   /**
    * EXERCISE 2
@@ -40,7 +43,13 @@ object credit_card {
    * or a digital product, such as a book or movie, or access to an event, such
    * as a music concert or film showing.
    */
-  type Product
+  sealed trait Product
+
+  object Product {
+    case object Physical extends Product
+    case object Digital extends Product
+    case object Event extends Product
+  }
 
   /**
    * EXERCISE 3
@@ -49,7 +58,23 @@ object credit_card {
    * of a product price, which could be one-time purchase fee, or a recurring
    * fee on some regular interval.
    */
-  type PricingScheme
+  sealed trait PricingScheme
+
+  object PricingScheme {
+    case class OneTime(amount: Double) extends PricingScheme
+    case class RecurringFee(amount: Double, interval: PurchaseInterval) extends PricingScheme
+  }
+
+  case class PurchaseInterval(startDate: LocalDate, interval: Int, intervalType: IntervalType)
+
+  sealed trait IntervalType
+
+  object IntervalType {
+    case object Hour extends IntervalType
+    case object Day extends IntervalType
+    case object Week extends IntervalType
+    case object Month extends IntervalType
+  }
 }
 
 /**
@@ -66,35 +91,42 @@ object events {
    * Refactor the object-oriented data model in this section to a more
    * functional one, which uses only sealed traits and case classes.
    */
-  abstract class Event(val id: Int) {
-
+  sealed trait Event {
+    def id: Int
     def time: Instant
   }
 
-  // Events are either UserEvent (produced by a user) or DeviceEvent (produced by a device),
-  // please don't extend both it will break code!!!
-  trait UserEvent extends Event {
+  sealed trait UserEvent {
     def userName: String
   }
 
-  // Events are either UserEvent (produced by a user) or DeviceEvent (produced by a device),
-  // please don't extend both it will break code!!!
-  trait DeviceEvent extends Event {
+  object UserEvent {
+    case class UserPurchase(
+      id: Int,
+      item: String,
+      price: Double,
+      time: Instant,
+      userName: String) extends UserEvent
+
+    case class UserAccountCreated(
+      id: Int,
+      time: Instant,
+      userName: String) extends UserEvent
+  }
+
+  sealed trait DeviceEvent {
     def deviceId: Int
   }
 
-  class SensorUpdated(id: Int, val deviceId: Int, val time: Instant, val reading: Option[Double])
-      extends Event(id)
-      with DeviceEvent
+  object DeviceEvent {
+    case class SensorUpdated(
+      id: Int,
+      deviceId: Int,
+      time: Instant,
+      reading: Option[Double]) extends DeviceEvent
 
-  class DeviceActivated(id: Int, val deviceId: Int, val time: Instant) extends Event(id) with DeviceEvent
-
-  class UserPurchase(id: Int, val item: String, val price: Double, val time: Instant, val userName: String)
-      extends Event(id)
-      with UserEvent
-
-  class UserAccountCreated(id: Int, val userName: String, val time: Instant) extends Event(id) with UserEvent
-
+    case class DeviceActivated(id: Int, deviceId: Int, time: Instant) extends DeviceEvent
+  }
 }
 
 /**
@@ -114,7 +146,7 @@ object documents {
    * Using only sealed traits and case classes, create a simplified but somewhat
    * realistic model of a Document.
    */
-  type Document
+  case class Document(id: DocId, name: String, content: DocContent, createdAt: LocalDate, modifiedAt: LocalDate)
 
   /**
    * EXERCISE 2
@@ -123,7 +155,13 @@ object documents {
    * type that a given user might have with respect to a document. For example,
    * some users might have read-only permission on a document.
    */
-  type AccessType
+  sealed trait AccessType
+
+  object AccessType {
+    case object Read extends AccessType
+    case object Write extends AccessType
+    case object Share extends AccessType
+  }
 
   /**
    * EXERCISE 3
@@ -132,7 +170,10 @@ object documents {
    * permissions that a user has on a set of documents they have access to.
    * Do not store the document contents themselves in this model.
    */
-  type DocPermissions
+  case class DocPermissions(permissions: Map[DocId, List[AccessType]]) {
+    def check(docId: DocId, permission: AccessType): Boolean =
+      permissions.get(docId).exists(_.contains(permission))
+  }
 }
 
 /**
@@ -142,12 +183,14 @@ object documents {
  */
 object bank {
 
+  final case class UserId(identifier: String)
+
   /**
    * EXERCISE 1
    *
    * Using only sealed traits and case classes, develop a model of a customer at a bank.
    */
-  type Customer
+  case class Customer(id: UserId, name: String, birthDate: LocalDate)
 
   /**
    * EXERCISE 2
@@ -157,7 +200,14 @@ object bank {
    * against a given currency. Another account type allows the user to earn
    * interest at a given rate for the holdings in a given currency.
    */
-  type AccountType
+  sealed trait AccountType
+
+  object AccountType {
+    case object Savings extends AccountType
+    case object Checking extends AccountType
+    case object Retirement extends AccountType
+    case object Deposit extends AccountType
+  }
 
   /**
    * EXERCISE 3
@@ -166,7 +216,7 @@ object bank {
    * account, including details on the type of bank account, holdings, customer
    * who owns the bank account, and customers who have access to the bank account.
    */
-  type Account
+  case class Account(balance: Double, accountType: AccountType, owner: Customer, allowedAccess: Set[Customer])
 }
 
 /**
@@ -176,13 +226,23 @@ object bank {
  */
 object portfolio {
 
+  import net.degoes.bank.Account
+
+  final case class UserId(identifier: String)
+
   /**
    * EXERCISE 1
    *
    * Using only sealed traits and case classes, develop a model of a stock
    * exchange. Ensure there exist values for NASDAQ and NYSE.
    */
-  type Exchange
+  sealed trait Exchange
+
+  object Exchange {
+    case object NASDAQ extends Exchange
+    case object NYSE extends Exchange
+    case object MOEX extends Exchange
+  }
 
   /**
    * EXERCISE 2
@@ -190,7 +250,13 @@ object portfolio {
    * Using only sealed traits and case classes, develop a model of a currency
    * type.
    */
-  type CurrencyType
+  sealed trait CurrencyType
+
+  object CurrencyType {
+    case object EUR extends CurrencyType
+    case object USD extends CurrencyType
+    case object RUB extends CurrencyType
+  }
 
   /**
    * EXERCISE 3
@@ -198,7 +264,11 @@ object portfolio {
    * Using only sealed traits and case classes, develop a model of a stock
    * symbol. Ensure there exists a value for Apple's stock (APPL).
    */
-  type StockSymbol
+  case class StockSymbol(name: String, exchange: Exchange)
+
+  object StockSymbol {
+    val appleStock: StockSymbol = StockSymbol("AAPL", Exchange.NASDAQ)
+  }
 
   /**
    * EXERCISE 4
@@ -206,7 +276,11 @@ object portfolio {
    * Using only sealed traits and case classes, develop a model of a portfolio
    * held by a user of the web application.
    */
-  type Portfolio
+  case class Portfolio(
+    userId: UserId,
+    balance: BigDecimal,
+    currencyType: CurrencyType,
+    instruments: List[StockSymbol])
 
   /**
    * EXERCISE 5
@@ -214,7 +288,7 @@ object portfolio {
    * Using only sealed traits and case classes, develop a model of a user of
    * the web application.
    */
-  type User
+  case class User(id: UserId, name: String, birthDate: LocalDate, account: Account)
 
   /**
    * EXERCISE 6
@@ -222,7 +296,12 @@ object portfolio {
    * Using only sealed traits and case classes, develop a model of a trade type.
    * Example trade types might include Buy and Sell.
    */
-  type TradeType
+  sealed trait TradeType
+
+  object TradeType {
+    case object Buy extends TradeType
+    case object Sell extends TradeType
+  }
 
   /**
    * EXERCISE 7
@@ -231,5 +310,12 @@ object portfolio {
    * which involves a particular trade type of a specific stock symbol at
    * specific prices.
    */
-  type Trade
+  case class Trade(
+    tradeType: TradeType,
+    exchange: Exchange,
+    symbol: StockSymbol,
+    userId: UserId,
+    price: BigDecimal,
+    currencyType: CurrencyType,
+    quantity: Double)
 }
