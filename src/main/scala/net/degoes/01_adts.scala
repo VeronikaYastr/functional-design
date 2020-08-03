@@ -61,8 +61,8 @@ object credit_card {
   sealed trait PricingScheme
 
   object PricingScheme {
-    case class OneTime(amount: Double) extends PricingScheme
-    case class RecurringFee(amount: Double, interval: PurchaseInterval) extends PricingScheme
+    case class OneTime(amount: BigDecimal) extends PricingScheme
+    case class RecurringFee(amount: BigDecimal, interval: PurchaseInterval) extends PricingScheme
   }
 
   case class PurchaseInterval(startDate: LocalDate, interval: Int, intervalType: IntervalType)
@@ -104,7 +104,7 @@ object events {
     case class UserPurchase(
       id: Int,
       item: String,
-      price: Double,
+      price: BigDecimal,
       time: Instant,
       userName: String) extends UserEvent
 
@@ -216,7 +216,7 @@ object bank {
    * account, including details on the type of bank account, holdings, customer
    * who owns the bank account, and customers who have access to the bank account.
    */
-  case class Account(balance: Double, accountType: AccountType, owner: Customer, allowedAccess: Set[Customer])
+  case class Account(balance: BigDecimal, accountType: AccountType, owner: Customer, allowedAccess: Set[Customer])
 }
 
 /**
@@ -280,7 +280,7 @@ object portfolio {
     userId: UserId,
     balance: BigDecimal,
     currencyType: CurrencyType,
-    instruments: List[StockSymbol])
+    instruments: List[(StockSymbol, BigDecimal)])
 
   /**
    * EXERCISE 5
@@ -317,5 +317,5 @@ object portfolio {
     userId: UserId,
     price: BigDecimal,
     currencyType: CurrencyType,
-    quantity: Double)
+    quantity: Int)
 }
